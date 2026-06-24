@@ -64,15 +64,16 @@ xhs_crawler/
 │   ├── crawler.py       # 笔记爬取器
 │   ├── models.py        # 数据模型
 │   └── utils.py         # 工具函数
+├── doc/
+│   └── SOP.md           # 标准操作流程
 ├── cli.py               # CLI 入口
 ├── requirements.txt     # 依赖
-├── README.md            # 本文件
-└── SOP.md               # 标准操作流程
+└── README.md            # 本文件
 ```
 
 ## 详细文档
 
-更多使用说明请参考 [SOP.md](./SOP.md)。
+更多使用说明请参考 [SOP.md](./doc/SOP.md)。
 
 ## 免责声明
 
