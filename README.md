@@ -65,6 +65,11 @@ python cli.py user "https://www.xiaohongshu.com/user/profile/用户ID" \
 编辑 `crawler_config.yml`：
 
 ```yaml
+# 用户主页模式：爬取用户笔记
+# user_url: https://www.xiaohongshu.com/user/profile/用户ID
+# max_notes: 1  # 爬取用户笔记数量，默认1
+
+# 笔记URL模式：直接爬取指定笔记
 note_url:
   - https://www.xiaohongshu.com/explore/笔记ID1
   - https://www.xiaohongshu.com/explore/笔记ID2

@@ -118,35 +118,43 @@ async def cmd_run(args):
     """从配置文件读取 URL 和 Cookie 进行爬取"""
     config = load_config(args.config)
 
-    note_urls = config.get("note_url", "")
+    note_urls = config.get("note_url", [])
     cookie = config.get("cookie", "")
+    user_url = config.get("user_url", "")
+    max_notes = config.get("max_notes", 1)
 
-    if not note_urls:
-        raise ValueError("配置文件中未找到 note_url")
-
-    if isinstance(note_urls, list):
-        urls = [u.strip() for u in note_urls if u.strip()]
-    else:
-        urls = [u.strip() for u in str(note_urls).split(",") if u.strip()]
-
-    print(f"📋 从配置文件加载了 {len(urls)} 个笔记链接")
-
-    if not urls:
-        raise ValueError("配置文件中 note_url 为空")
-
-    auth = AuthManager(method=AuthMethod.COOKIE_FILE)
-    if cookie:
-        cookie_path = Path("crawler_config_cookie.txt")
-        with open(cookie_path, "w", encoding="utf-8") as f:
-            f.write(cookie)
-        auth.load_from_cookie_file(str(cookie_path))
-    else:
+    if not cookie:
         raise ValueError("配置文件中未找到 cookie")
 
-    async with XhsCrawler(auth_manager=auth, headless=args.headless) as crawler:
-        notes = await crawler.fetch_notes_batch(urls, delay=args.delay)
+    auth = AuthManager(method=AuthMethod.COOKIE_FILE)
+    cookie_path = Path("crawler_config_cookie.txt")
+    with open(cookie_path, "w", encoding="utf-8") as f:
+        f.write(cookie)
+    auth.load_from_cookie_file(str(cookie_path))
 
-    print(f"\n✅ 成功爬取 {len(notes)}/{len(urls)} 篇笔记")
+    async with XhsCrawler(auth_manager=auth, headless=args.headless) as crawler:
+        if user_url:
+            print(f"📋 从配置文件加载用户主页: {user_url}")
+            note_urls = await crawler.fetch_user_notes(user_url, max_notes=max_notes)
+            print(f"📋 用户共 {len(note_urls)} 篇笔记，将爬取前 {min(len(note_urls), max_notes)} 篇")
+            note_urls = note_urls[:max_notes]
+
+            notes = await crawler.fetch_notes_batch(note_urls, delay=args.delay)
+        else:
+            if isinstance(note_urls, list):
+                urls = [u.strip() for u in note_urls if u.strip()]
+            else:
+                urls = [u.strip() for u in str(note_urls).split(",") if u.strip()]
+
+            print(f"📋 从配置文件加载了 {len(urls)} 个笔记链接")
+            urls = urls[:max_notes] if max_notes > 0 else urls
+
+            if not urls:
+                raise ValueError("配置文件中 note_url 为空")
+
+            notes = await crawler.fetch_notes_batch(urls, delay=args.delay)
+
+    print(f"\n✅ 成功爬取 {len(notes)} 篇笔记")
 
     output_dir = args.output or "output"
     path = save_notes_batch(notes, output_dir)
