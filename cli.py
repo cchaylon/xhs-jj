@@ -34,6 +34,24 @@ from xhs_crawler import XhsCrawler, AuthManager, AuthMethod
 from xhs_crawler.utils import save_note_json, save_notes_batch, print_note_summary
 
 
+def load_config(config_path: str = "crawler_config.txt") -> dict:
+    """从配置文件读取 note_url 和 cookie"""
+    path = Path(config_path)
+    if not path.exists():
+        raise FileNotFoundError(f"配置文件不存在: {config_path}")
+
+    config = {}
+    with open(path, "r", encoding="utf-8") as f:
+        for line in f:
+            line = line.strip()
+            if not line or line.startswith("#"):
+                continue
+            if ":" in line:
+                key, value = line.split(":", 1)
+                config[key.strip()] = value.strip()
+    return config
+
+
 def build_auth_manager(args) -> AuthManager:
     if args.auth == "browser":
         return AuthManager(method=AuthMethod.BROWSER_LOGIN)
@@ -102,6 +120,44 @@ async def cmd_batch(args):
         print(f"  [{i}] {note.note_id} - {note.title[:40]}")
 
 
+async def cmd_run(args):
+    """从配置文件读取 URL 和 Cookie 进行爬取"""
+    config = load_config(args.config)
+
+    note_urls = config.get("note_url", "")
+    cookie = config.get("cookie", "")
+
+    if not note_urls:
+        raise ValueError("配置文件中未找到 note_url")
+
+    urls = [u.strip() for u in note_urls.split(",") if u.strip()]
+    print(f"📋 从配置文件加载了 {len(urls)} 个笔记链接")
+
+    if not urls:
+        raise ValueError("配置文件中 note_url 为空")
+
+    auth = AuthManager(method=AuthMethod.COOKIE_FILE)
+    if cookie:
+        cookie_path = Path("crawler_config_cookie.txt")
+        with open(cookie_path, "w", encoding="utf-8") as f:
+            f.write(cookie)
+        auth.load_from_cookie_file(str(cookie_path))
+    else:
+        raise ValueError("配置文件中未找到 cookie")
+
+    async with XhsCrawler(auth_manager=auth, headless=args.headless) as crawler:
+        notes = await crawler.fetch_notes_batch(urls, delay=args.delay)
+
+    print(f"\n✅ 成功爬取 {len(notes)}/{len(urls)} 篇笔记")
+
+    output_dir = args.output or "output"
+    path = save_notes_batch(notes, output_dir)
+    print(f"💾 结果已保存到: {path}")
+
+    for i, note in enumerate(notes, 1):
+        print(f"  [{i}] {note.note_id} - {note.title[:40]}")
+
+
 async def cmd_user(args):
     auth = build_auth_manager(args)
 
@@ -147,6 +203,12 @@ def main():
     login_parser.add_argument("--save-state", help="保存 storage state 到指定文件")
     login_parser.add_argument("--timeout", type=int, default=300, help="登录超时时间（秒）")
 
+    run_parser = subparsers.add_parser("run", help="从配置文件读取 URL 和 Cookie 进行爬取")
+    run_parser.add_argument("--config", default="crawler_config.txt", help="配置文件路径（默认: crawler_config.txt）")
+    run_parser.add_argument("--output", "-o", help="输出目录（默认: output）")
+    run_parser.add_argument("--delay", type=float, default=2.0, help="请求间隔（秒，默认: 2）")
+    run_parser.add_argument("--headless", action="store_true", help="无头模式")
+
     note_parser = subparsers.add_parser("note", help="爬取单篇笔记")
     note_parser.add_argument("url", help="笔记 URL")
     note_parser.add_argument(
@@ -188,6 +250,7 @@ def main():
 
     cmd_map = {
         "login": cmd_login,
+        "run": cmd_run,
         "note": cmd_note,
         "batch": cmd_batch,
         "user": cmd_user,

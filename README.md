@@ -60,6 +60,21 @@ python cli.py user "https://www.xiaohongshu.com/user/profile/用户ID" \
   --auth cookie --cookie-file cookies.json --max-notes 50
 ```
 
+### 5. 使用配置文件启动（推荐）
+
+编辑 `crawler_config.txt`：
+
+```
+note_url:https://www.xiaohongshu.com/explore/笔记ID1,https://www.xiaohongshu.com/explore/笔记ID2
+cookie:your_cookie_here
+```
+
+直接运行：
+
+```bash
+python cli.py run
+```
+
 ## 认证方式
 
 | 方式 | 说明 | 适用场景 |
@@ -90,6 +105,9 @@ python cli.py user "https://www.xiaohongshu.com/user/profile/用户ID" \
 ```bash
 # 登录
 python cli.py login [--save-cookie FILE] [--save-state FILE] [--timeout SEC] [--headless]
+
+# 使用配置文件启动（推荐）
+python cli.py run [--config FILE] [--output DIR] [--delay SEC] [--headless]
 
 # 单篇笔记
 python cli.py note URL [--auth browser|cookie] [--cookie-file FILE] [--output DIR] [--save-cookie FILE] [--headless]
