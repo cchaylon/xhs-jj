@@ -26,6 +26,7 @@
 import asyncio
 import argparse
 import sys
+import yaml
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent))
@@ -34,22 +35,15 @@ from xhs_crawler import XhsCrawler, AuthManager, AuthMethod
 from xhs_crawler.utils import save_note_json, save_notes_batch, print_note_summary
 
 
-def load_config(config_path: str = "crawler_config.txt") -> dict:
-    """从配置文件读取 note_url 和 cookie"""
+def load_config(config_path: str = "crawler_config.yml") -> dict:
+    """从 YAML 配置文件读取 note_url 和 cookie"""
     path = Path(config_path)
     if not path.exists():
         raise FileNotFoundError(f"配置文件不存在: {config_path}")
 
-    config = {}
     with open(path, "r", encoding="utf-8") as f:
-        for line in f:
-            line = line.strip()
-            if not line or line.startswith("#"):
-                continue
-            if ":" in line:
-                key, value = line.split(":", 1)
-                config[key.strip()] = value.strip()
-    return config
+        config = yaml.safe_load(f)
+    return config or {}
 
 
 def build_auth_manager(args) -> AuthManager:
@@ -130,7 +124,11 @@ async def cmd_run(args):
     if not note_urls:
         raise ValueError("配置文件中未找到 note_url")
 
-    urls = [u.strip() for u in note_urls.split(",") if u.strip()]
+    if isinstance(note_urls, list):
+        urls = [u.strip() for u in note_urls if u.strip()]
+    else:
+        urls = [u.strip() for u in str(note_urls).split(",") if u.strip()]
+
     print(f"📋 从配置文件加载了 {len(urls)} 个笔记链接")
 
     if not urls:
@@ -204,7 +202,7 @@ def main():
     login_parser.add_argument("--timeout", type=int, default=300, help="登录超时时间（秒）")
 
     run_parser = subparsers.add_parser("run", help="从配置文件读取 URL 和 Cookie 进行爬取")
-    run_parser.add_argument("--config", default="crawler_config.txt", help="配置文件路径（默认: crawler_config.txt）")
+    run_parser.add_argument("--config", default="crawler_config.yml", help="配置文件路径（默认: crawler_config.yml）")
     run_parser.add_argument("--output", "-o", help="输出目录（默认: output）")
     run_parser.add_argument("--delay", type=float, default=2.0, help="请求间隔（秒，默认: 2）")
     run_parser.add_argument("--headless", action="store_true", help="无头模式")

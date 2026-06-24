@@ -62,11 +62,13 @@ python cli.py user "https://www.xiaohongshu.com/user/profile/用户ID" \
 
 ### 5. 使用配置文件启动（推荐）
 
-编辑 `crawler_config.txt`：
+编辑 `crawler_config.yml`：
 
-```
-note_url:https://www.xiaohongshu.com/explore/笔记ID1,https://www.xiaohongshu.com/explore/笔记ID2
-cookie:your_cookie_here
+```yaml
+note_url:
+  - https://www.xiaohongshu.com/explore/笔记ID1
+  - https://www.xiaohongshu.com/explore/笔记ID2
+cookie: your_cookie_here
 ```
 
 直接运行：
